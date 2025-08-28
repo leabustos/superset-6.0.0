@@ -1,0 +1,32 @@
+services:
+  superset:
+    image: apache/superset:6.0.0rc1
+    container_name: superset_app
+    restart: always
+    environment:
+      - DATABASE_DIALECT=postgresql
+    env_file:
+      - .env
+      - .db.env
+      - .redis.env
+    depends_on:
+      - db
+      - redis
+    expose:
+      - 8088
+    volumes:
+      - superset_home:/app/superset_home
+    command: >
+      bash -c "
+        superset db upgrade &&
+        superset fab create-admin --username admin --firstname Admin --lastname User --email admin@admin.com --password admin &&
+        superset init &&
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
+      "
+    networks:
+        - superset_net
+volumes:
+  superset_home:
+networks:
+  superset_net:
+    driver: bridge

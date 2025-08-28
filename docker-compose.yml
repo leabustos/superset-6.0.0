@@ -1,0 +1,130 @@
+services:
+  db:
+    image: postgres:16
+    container_name: superset_db
+    restart: always
+    env_file: .env
+    volumes:
+      - superset_db:/var/lib/postgresql/data
+    networks:
+        - superset_net
+  redis:
+    image: redis:7
+    container_name: superset_cache
+    restart: always
+    volumes:
+      - superset_redis:/data
+      # - ./redis/redis.conf
+    # command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+        - superset_net
+  superset:
+    image: apache/superset:6.0.0rc1
+    container_name: superset_app
+    restart: always
+    environment:
+      - DATABASE_DIALECT=postgresql
+    env_file: .env
+    ports:
+      - 8088:8088
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    volumes:
+      - superset_home:/app/superset_home
+    networks:
+        - superset_net
+  ## Contenedor de inicialización (se ejecuta una sola vez)
+  superset-init:
+    image: apache/superset:6.0.0rc1
+    container_name: superset_init
+    command: ["/app/docker/docker-init.sh"]
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_DIALECT=postgresql
+    env_file: .env
+    volumes:
+      - superset_home:/app/superset_home
+    networks:
+        - superset_net
+  ## Worker de Celery: ejecuta tareas pesadas en segundo plano
+  superset-worker:
+    image: apache/superset:6.0.0rc1
+    container_name: superset_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    restart: always
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    environment:
+      - DATABASE_DIALECT=postgresql
+    env_file: .env
+    volumes:
+      - superset_home:/app/superset_home
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
+    networks:
+        - superset_net
+
+  # Planificador de Celery: programa tareas periódicas
+  superset-worker-beat:
+    image: apache/superset:6.0.0rc1
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    restart: always
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      - DATABASE_DIALECT=postgresql
+    volumes:
+      - superset_home:/app/superset_home
+    healthcheck:
+      disable: true
+    networks:
+        - superset_net
+
+  nginx-http:
+    image: nginx:latest
+    container_name: superset_nginx_http
+    restart: unless-stopped
+    profiles: [http] # Este servicio solo se activa con el perfil "http"
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/superset_http.conf:/etc/nginx/conf.d/superset.conf:ro # Montamos solo la config HTTP
+    networks:
+      - superset_net
+    depends_on:
+      - superset
+
+  nginx-ssl:
+    image: nginx:latest
+    container_name: superset_nginx_ssl
+    restart: unless-stopped
+    profiles: [ssl] # Este servicio solo se activa con el perfil "ssl"
+    ports:
+      - 80:80
+      - 443:443
+    env_file: .env # Carga el .env para usar ${DOMAIN_NAME}
+    volumes:
+      # Monta la configuración de Nginx y el template de SSL procesado
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/superset_ssl.conf:/etc/nginx/conf.d/superset.conf:ro # Montamos solo la config SSL
+      # Monta el directorio de certificados
+      - ./nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - superset_net
+    depends_on:
+      - superset
+volumes:
+  superset_home:
+  superset_db:
+  superset_redis:
+networks:
+  superset_net:
+    driver: bridge

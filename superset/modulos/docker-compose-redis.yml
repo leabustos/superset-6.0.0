@@ -1,0 +1,18 @@
+services:
+  redis:
+    image: redis:7
+    container_name: superset_redis
+    restart: always
+    volumes:
+      - superset_redis:/data
+      - ./redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - 6379:6379
+    networks:
+        - superset_net
+volumes:
+  superset_redis:
+networks:
+  superset_net:
+    driver: bridge

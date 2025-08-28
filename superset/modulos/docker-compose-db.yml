@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15
+    container_name: superset_db
+    restart: always
+    env_file:
+      - .db.env
+    volumes:
+      - superset_db:/var/lib/postgresql/data
+    networks:
+      - superset_net
+volumes:
+  superset_db:
+networks:
+  superset_net:
+    driver: bridge
