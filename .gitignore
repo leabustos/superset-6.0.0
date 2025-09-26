@@ -3,4 +3,4 @@
 .redis.conf
 !.env.example
 .env.*
-./extra/
+extra/
