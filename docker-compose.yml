@@ -6,6 +6,8 @@ services:
     env_file: .env
     volumes:
       - superset_db:/var/lib/postgresql/data
+      - chmod +x ./docker/docker-entrypoint-initdb.d/*.sql
+      - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d  # add entry point to create superset tables on postgres db
     networks:
         - superset_net
   redis:
@@ -24,6 +26,7 @@ services:
     restart: always
     environment:
       - DATABASE_DIALECT=postgresql
+      - EXTRA_PIP_PACKAGES=psycopg2-binary
     env_file: .env
     ports:
       - 8088:8088

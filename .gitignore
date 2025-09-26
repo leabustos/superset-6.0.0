@@ -1,4 +1,6 @@
 .env
 .db.env
 .redis.conf
-.redis.conf
+!.env.example
+.env.*
+./extra/
