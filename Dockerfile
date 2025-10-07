@@ -7,16 +7,20 @@
 
 # change this to apache/superset:5.0.0 or whatever version you want to build from;
 # otherwise the default is the latest commit on GitHub master branch
-FROM apache/superset:6.0.0rc2
+FROM apache/superset:6.0.0rc1
 USER root
 
-# Set environment variable for Playwright
-ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers
+# 1. Install system build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install packages using uv into the virtual environment
-RUN . /app/.venv/bin/activate && \
-    uv pip install \
-    # install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
+RUN pip install --no-cache-dir --upgrade uv
+
+RUN pip install \
+# install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
     psycopg2-binary \
     # add the driver(s) for your data warehouse(s), oracle:
     python-oracledb \
@@ -31,6 +35,28 @@ RUN . /app/.venv/bin/activate && \
     # Playwright works only with Chrome.
     # If you are still using Selenium instead of Playwright, you would instead install here the selenium package and a headless browser & webdriver
     playwright \
+
+# Install packages using uv into the virtual environment
+#RUN uv pip install \
+# install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
+#    psycopg2-binary \
+    # add the driver(s) for your data warehouse(s), oracle:
+#    python-oracledb \
+    # package needed for using single-sign on authentication:
+#    Authlib \
+    # openpyxl to be able to upload Excel files
+#    openpyxl \
+    # Pillow for Alerts & Reports to generate PDFs of dashboards
+#    Pillow \
+    # install Playwright for taking screenshots for Alerts & Reports. This assumes the feature flag PLAYWRIGHT_REPORTS_AND_THUMBNAILS is enabled
+    # That feature flag will default to True starting in 6.0.0
+    # Playwright works only with Chrome.
+    # If you are still using Selenium instead of Playwright, you would instead install here the selenium package and a headless browser & webdriver
+#    playwright \
+    
+    # Install Playwright dependencies and browser
+#RUN playwright install-deps && \
+#    PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
     && playwright install-deps \
     && PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
 
@@ -39,50 +65,52 @@ USER superset
 
 CMD ["/app/docker/entrypoints/run-server.sh"]
 
+#FROM postgres:16
+# Copy your SQL scripts into the image
+#COPY ./docker/docker-entrypoint-initdb.d/ /docker-entrypoint-initdb.d/
+# Set the execute permissions
+#RUN chmod +x /docker-entrypoint-initdb.d/*.sql
 
-https://download.oracle.com/otn_software/linux/instantclient/2390000/instantclient-basic-linux.x64-23.9.0.25.07.zip
-
-
-
+#https://download.oracle.com/otn_software/linux/instantclient/2390000/instantclient-basic-linux.x64-23.9.0.25.07.zip
 
 # Install the required locale
-RUN apt-get update && \
-    apt-get install -y locales && \
-    localedef -i es_ES -c -f UTF-8 -A /usr/share/locale/locale.alias es_ES.UTF-8
+#RUN apt-get update && \
+#    apt-get install -y locales && \
+#    localedef -i es_ES -c -f UTF-8 -A /usr/share/locale/locale.alias es_ES.UTF-8
 
 # Set default locale environment variables
-ENV LANG es_ES.UTF-8
+#ENV LANG es_ES.UTF-8
 
 # Argumento para versión del cliente Oracle
-ARG ORACLE_VERSION=instantclient_23_9
+#ARG ORACLE_VERSION=instantclient_23_9
 
 # Instalación de dependencias del sistema y Python
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y \
-        wget unzip apt-utils libaio1 curl && \
-    pip install --no-cache-dir \
-        gevent psycopg2 redis watchdog cx_Oracle && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && \
+#    apt-get install --no-install-recommends -y \
+#        wget unzip apt-utils libaio1 curl && \
+#    pip install --no-cache-dir \
+#        gevent psycopg2 redis watchdog cx_Oracle && \
+#    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Instalación del cliente Oracle
 # Copiar el ZIP ya descargado
-COPY extra/instantclient-basic-linux.x64-23.5.zip /oracle/
+#COPY extra/instantclient-basic-linux.x64-23.5.zip /oracle/
 
 # Instalar Oracle Instant Client desde el ZIP
-RUN cd /oracle && \
-    unzip instantclient-basic-linux.x64-23.5.zip && \
-    rm instantclient-basic-linux.x64-23.5.zip && \
-    mkdir -p /oracle && \
-    ln -s /oracle/instantclient_23_5 /oracle/instantclient && \
-    ln -sf /oracle/instantclient/libclntsh.so.23.1 /oracle/instantclient/libclntsh.so && \
-    echo /oracle/instantclient > /etc/ld.so.conf.d/oracle-instantclient.conf && \
-    ldconfig
-ENV LD_LIBRARY_PATH=/oracle/instantclient \
-    ORACLE_HOME=/oracle/instantclient
+# RUN cd /oracle && \
+#     unzip instantclient-basic-linux.x64-23.5.zip && \
+#     rm instantclient-basic-linux.x64-23.5.zip && \
+#     mkdir -p /oracle && \
+#     ln -s /oracle/instantclient_23_5 /oracle/instantclient && \
+#     ln -sf /oracle/instantclient/libclntsh.so.23.1 /oracle/instantclient/libclntsh.so && \
+#     echo /oracle/instantclient > /etc/ld.so.conf.d/oracle-instantclient.conf && \
+#     ldconfig
+# ENV LD_LIBRARY_PATH=/oracle/instantclient \
+#     ORACLE_HOME=/oracle/instantclient
 
 # Configuración y recursos personalizados
 #COPY -f config/images/bareos.png /app/superset/static/assets/images/bareos.png
 #COPY -f config/images/loading.gif /app/superset/static/assets/images/loading.gif
 
-COPY docker/docker-init.sh /app/docker-init.sh
-RUN chmod +x /app/docker-init.sh
+# COPY docker/docker-init.sh /app/docker-init.sh
+# RUN chmod +x /app/docker-init.sh
