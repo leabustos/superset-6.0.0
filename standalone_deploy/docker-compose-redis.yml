@@ -1,0 +1,28 @@
+# Docker Compose para Redis standalone
+# Uso: docker-compose -f docker/docker-compose-redis.yml up -d
+
+services:
+  redis:
+    image: redis:7
+    container_name: superset_cache
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - superset_redis:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - superset_net
+
+volumes:
+  superset_redis:
+
+networks:
+  superset_net:
+    driver: bridge

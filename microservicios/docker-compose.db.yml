@@ -1,0 +1,30 @@
+# Servicio de base de datos PostgreSQL independiente
+# Uso: docker compose -f microservicios/docker-compose.db.yml up -d
+
+services:
+  db:
+    image: postgres:16
+    container_name: superset_db
+    restart: always
+    env_file: ../.env
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - superset_db:/var/lib/postgresql/data
+      - ../docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-superset} -d ${POSTGRES_DB:-superset}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - superset_net
+
+volumes:
+  superset_db:
+
+networks:
+  superset_net:
+    name: superset_net
+    driver: bridge

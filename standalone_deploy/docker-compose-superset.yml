@@ -1,0 +1,106 @@
+# Docker Compose para Superset standalone
+# Uso: docker-compose -f docker/docker-compose-superset.yml up -d
+# Requiere: PostgreSQL y Redis corriendo (ver docker-compose-db.yml y docker-compose-redis.yml)
+
+services:
+  superset-init:
+    image: apache/superset:6.0.0rc2
+    container_name: superset_init
+    command: >
+      bash -c "
+      pip install psycopg2-binary &&
+      superset db upgrade &&
+      superset fab create-admin \
+        --username $${ADMIN_USERNAME} \
+        --firstname $${ADMIN_FIRSTNAME:-Admin} \
+        --lastname $${ADMIN_LASTNAME:-User} \
+        --email $${ADMIN_EMAIL} \
+        --password $${ADMIN_PASSWORD} || true &&
+      superset init
+      "
+    environment:
+      - DATABASE_DIALECT=postgresql
+    env_file:
+      - ../.env
+    volumes:
+      - superset_home:/app/superset_home
+      - ../superset_config.py:/app/pythonpath/superset_config.py:ro
+    networks:
+      - superset_net
+
+  superset:
+    image: apache/superset:6.0.0rc2
+    container_name: superset_app
+    restart: always
+    environment:
+      - DATABASE_DIALECT=postgresql
+      - EXTRA_PIP_PACKAGES=psycopg2-binary
+    env_file:
+      - ../.env
+    ports:
+      - "8088:8088"
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    volumes:
+      - superset_home:/app/superset_home
+      - ../superset_config.py:/app/pythonpath/superset_config.py:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - superset_net
+
+  superset-worker:
+    image: apache/superset:6.0.0rc2
+    container_name: superset_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    restart: always
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    environment:
+      - DATABASE_DIALECT=postgresql
+    env_file:
+      - ../.env
+    volumes:
+      - superset_home:/app/superset_home
+      - ../superset_config.py:/app/pythonpath/superset_config.py:ro
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - superset_net
+
+  superset-worker-beat:
+    image: apache/superset:6.0.0rc2
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    restart: always
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_DIALECT=postgresql
+    volumes:
+      - superset_home:/app/superset_home
+      - ../superset_config.py:/app/pythonpath/superset_config.py:ro
+    healthcheck:
+      disable: true
+    networks:
+      - superset_net
+
+volumes:
+  superset_home:
+
+networks:
+  superset_net:
+    driver: bridge

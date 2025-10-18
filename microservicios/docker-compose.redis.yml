@@ -1,0 +1,29 @@
+# Servicio de caché Redis independiente
+# Uso: docker compose -f microservicios/docker-compose.redis.yml up -d
+
+services:
+  redis:
+    image: redis:7
+    container_name: superset_cache
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - superset_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - superset_net
+
+volumes:
+  superset_redis:
+
+networks:
+  superset_net:
+    name: superset_net
+    driver: bridge

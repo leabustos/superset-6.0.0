@@ -1,0 +1,32 @@
+# Servicio de planificador de Celery Beat
+# Uso: docker compose -f microservicios/docker-compose.worker-beat.yml up -d
+# Requiere: db, redis y superset corriendo
+# NOTA: Solo debe haber UNA instancia de beat corriendo
+
+services:
+  superset-worker-beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    restart: always
+    environment:
+      - DATABASE_DIALECT=postgresql
+    env_file: ../.env
+    volumes:
+      - superset_home:/app/superset_home
+      - ../superset-config/superset_config.py:/app/pythonpat./superset-config/superset_config.py:ro
+    healthcheck:
+      disable: true
+    networks:
+      - superset_net
+
+volumes:
+  superset_home:
+    external: true
+
+networks:
+  superset_net:
+    name: superset_net
+    external: true
