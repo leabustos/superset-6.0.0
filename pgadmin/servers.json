@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Superset DB",
+      "Group": "Servers",
+      "Host": "superset-db", 
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "superset",
+      "Password": "superset",
+    }
+  }
+}
+
+

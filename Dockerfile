@@ -1,14 +1,35 @@
-#FROM apache/superset:6.0.0rc1
+# Use the official Superset 5.0.0 image as the base
+#FROM apache/superset:5.0.0
+
+# Switch to the root user to install system dependencies
 #USER root
-#RUN pip install psycopg2-binary
-#RUN uv pip install psycopg2-binary
-#RUN superset db upgrade
-#RUN superset init
+
+# Install build essentials and PostgreSQL development libraries required for psycopg2
+#RUN apt-get update && \
+#    apt-get install -y --no-install-recommends \
+#    gcc \
+#    libpq-dev \
+#    python3-dev \
+#    pkg-config && \
+#    rm -rf /var/lib/apt/lists/*
+
+# Switch back to the Superset user
+#USER superset
+
+# Install psycopg2-binary using uv within the Superset virtual environment
+# Superset 5.0.0 uses uv as the package manager
+#RUN . /app/.venv/bin/activate && \
+#    uv pip install psycopg2-binary
+
 
 # change this to apache/superset:5.0.0 or whatever version you want to build from;
 # otherwise the default is the latest commit on GitHub master branch
-FROM apache/superset:6.0.0rc1
+FROM apache/superset:5.0.0
+
 USER root
+
+# Set environment variable for Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers
 
 # 1. Install system build dependencies
 RUN apt-get update && \
@@ -19,11 +40,14 @@ RUN apt-get update && \
 
 RUN pip install --no-cache-dir --upgrade uv
 
+# Install packages using uv into the virtual environment
+#RUN . /app/.venv/bin/activate && \
+#    uv pip install \
 RUN pip install \
-# install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
+    # install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
     psycopg2-binary \
-    # add the driver(s) for your data warehouse(s), oracle:
-    python-oracledb \
+    # add the driver(s) for your data warehouse(s), in this example oracle:
+    pymssql \
     # package needed for using single-sign on authentication:
     Authlib \
     # openpyxl to be able to upload Excel files
@@ -35,6 +59,35 @@ RUN pip install \
     # Playwright works only with Chrome.
     # If you are still using Selenium instead of Playwright, you would instead install here the selenium package and a headless browser & webdriver
     playwright \
+    && playwright install-deps \
+    && PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
+
+    # Switch back to the superset user
+USER superset
+
+CMD ["/app/docker/entrypoints/run-server.sh"]
+
+
+
+#RUN pip install \
+# install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
+#    psycopg2-binary \
+    # add the driver(s) for your data warehouse(s), oracle:
+#    python-oracledb \
+    # package needed for using single-sign on authentication:
+#    Authlib \
+    # openpyxl to be able to upload Excel files
+#    openpyxl \
+    # Pillow for Alerts & Reports to generate PDFs of dashboards
+#    Pillow \
+    # install Playwright for taking screenshots for Alerts & Reports. This assumes the feature flag PLAYWRIGHT_REPORTS_AND_THUMBNAILS is enabled
+    # That feature flag will default to True starting in 6.0.0
+    # Playwright works only with Chrome.
+    # If you are still using Selenium instead of Playwright, you would instead install here the selenium package and a headless browser & webdriver
+#    playwright \
+    # Install Playwright dependencies and browser
+#    RUN playwright install-deps && \
+#    PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
 
 # Install packages using uv into the virtual environment
 #RUN uv pip install \
@@ -53,17 +106,17 @@ RUN pip install \
     # Playwright works only with Chrome.
     # If you are still using Selenium instead of Playwright, you would instead install here the selenium package and a headless browser & webdriver
 #    playwright \
+#    && playwright install-deps \
+#    && PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
     
-    # Install Playwright dependencies and browser
-#RUN playwright install-deps && \
-#    PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
-    && playwright install-deps \
-    && PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
+#RUN superset db upgrade
+
+#RUN superset init
 
 # Switch back to the superset user
-USER superset
+#USER superset
 
-CMD ["/app/docker/entrypoints/run-server.sh"]
+#CMD ["/app/docker/entrypoints/run-server.sh"]
 
 #FROM postgres:16
 # Copy your SQL scripts into the image
