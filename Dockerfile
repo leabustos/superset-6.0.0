@@ -21,31 +21,103 @@
 #RUN . /app/.venv/bin/activate && \
 #    uv pip install psycopg2-binary
 
-
 # change this to apache/superset:5.0.0 or whatever version you want to build from;
 # otherwise the default is the latest commit on GitHub master branch
+# FROM apache/superset:5.0.0
+
+# ARG BUILD_TRANSLATIONS=true
+
+# USER root
+
+# # Set environment variable for Playwright
+# ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers
+
+# # 1. Install system build dependencies
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#     gcc \
+#     libpq-dev && \
+#     rm -rf /var/lib/apt/lists/* && \
+#     pip install --no-cache-dir --upgrade uv && \
+#     # Install packages using uv into the virtual environment
+#     . /app/.venv/bin/activate && \
+#     uv pip install \
+#     #RUN pip install \
+#     # install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
+#     psycopg2-binary \
+#     # install db2 driver:
+#     #ibm_db \
+#     #ibm_db_sda \
+#     # add the driver(s) for your data warehouse(s), in this example oracle:
+#     pymssql \
+#     # package needed for using single-sign on authentication:
+#     Authlib \
+#     # openpyxl to be able to upload Excel files
+#     openpyxl \
+#     # Pillow for Alerts & Reports to generate PDFs of dashboards
+#     Pillow \
+#     # install Playwright for taking screenshots for Alerts & Reports. This assumes the feature flag PLAYWRIGHT_REPORTS_AND_THUMBNAILS is enabled
+#     # That feature flag will default to True starting in 6.0.0
+#     # Playwright works only with Chrome.
+#     # If you are still using Selenium instead of Playwright, you would instead install here the selenium package and a headless browser & webdriver
+#     playwright \
+#     #for superset cors to public dashboards
+#     flask-cors \ 
+#     && playwright install-deps \
+#     && PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
+
+# #COPY superset_config.py /app/pythonpath/superset_config.py \
+# #     messages.po /app/superset/translations/es/LC_MESSAGES/messages.po \
+# #     public_init.py /app/public_init.py \
+# #LOGOS
+# #     /assets/loading_pba_TEXT.gif /app/superset/static/assets/images/loading.gif \
+# #     /assets/pba-logo-horiz.png /app/superset/static/assets/images/favicon.png \
+# #    /assets/pba-logo-horiz.png /app/superset/static/assets/images/superset-logo-horiz.png
+
+# # Single COPY for all files
+# COPY ./custom/ /custom/
+
+# RUN \
+#   # Move config files
+#   cp /custom/superset_config.py /app/pythonpath/superset_config.py && \
+#   cp /custom/messages.po        /app/superset/translations/es/LC_MESSAGES/messages.po &&  \
+#   cp /custom/public_init.py     /app/public_init.py &&  \
+#   # Copy assets
+#   cp /custom/loading.gif /app/superset/static/assets/images/loading.gif && \
+#   cp /custom/logo.png    /app/superset/static/assets/images/favicon.png && \
+#   cp /custom/logo.png    /app/superset/static/assets/images/superset-logo-horiz.png && \
+#   chmod +x /app/public_init.py
+
+# # Switch back to the superset user
+# USER superset
+
+# # Run the initialization after superset init
+# CMD ["/app/docker/entrypoints/run-server.sh"]
 FROM apache/superset:5.0.0
+
+ARG BUILD_TRANSLATIONS=true
 
 USER root
 
-# Set environment variable for Playwright
+# Variabel de entorno para Playwright
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers
 
-# 1. Install system build dependencies
+# ----- CAPA 1: Dependencias -----
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir --upgrade uv
-
-# Install packages using uv into the virtual environment
-#RUN . /app/.venv/bin/activate && \
-#    uv pip install \
-RUN pip install \
+# ----- CAPA 2: Python packages -----
+# Use the full path to pip and uv to avoid source activation complexity
+RUN pip install --no-cache-dir --upgrade uv && \
+    uv pip install \
     # install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:
     psycopg2-binary \
+    # install db2 driver:
+    #ibm_db \
+    #ibm_db_sda \
     # add the driver(s) for your data warehouse(s), in this example oracle:
     pymssql \
     # package needed for using single-sign on authentication:
@@ -59,15 +131,33 @@ RUN pip install \
     # Playwright works only with Chrome.
     # If you are still using Selenium instead of Playwright, you would instead install here the selenium package and a headless browser & webdriver
     playwright \
+    #for superset cors to public dashboards
+    flask-cors \ 
     && playwright install-deps \
     && PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright-browsers playwright install chromium
 
-    # Switch back to the superset user
+# ----- CAPA 3: Copia de archivos custom -----
+COPY ./custom/ /custom/
+
+RUN cp /custom/superset_config.py /app/pythonpath/superset_config.py && \
+    cp /custom/messages.po /app/superset/translations/es/LC_MESSAGES/messages.po && \
+    cp /custom/public_init.py /app/public_init.py && \
+    #Borrar loading gif que dan problemas
+    cp /custom/loading.gif /app/build/lib/superset/static/assets/loading.cff8a5da.gif && \
+    cp /custom/loading.gif /app/superset/static/assets/loading.cff8a5da.gif && \
+    cp /custom/loading.gif /app/.venv/lib/python3.10/site-packages/superset/static/assets/loading.cff8a5da.gif && \
+    #Copy custom assets
+    cp /custom/loading.gif /app/build/lib/superset/static/assets/images/loading.gif && \
+    cp /custom/loading.gif /app/.venv/lib/python3.10/site-packages/superset/static/assets/images/loading.gif && \
+    cp /custom/loading.gif /app/superset/static/assets/images/loading.gif && \
+    cp /custom/favicon.png /app/superset/static/assets/images/favicon.png && \
+    cp /custom/logo-horiz.png /app/superset/static/assets/images/superset-logo-horiz.png && \
+    chmod +x /app/public_init.py
+
+# ----- FINAL: Cambio a Superset user para correr entrypoint -----
 USER superset
 
 CMD ["/app/docker/entrypoints/run-server.sh"]
-
-
 
 #RUN pip install \
 # install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:

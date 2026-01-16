@@ -20,19 +20,22 @@ services:
     networks:
         - superset-net
   superset:
-    image: apache/superset:5.0.0
-    build: .
+    image: apache/superset:${TAG}
+    build:
+      context: .  # The build context (where your Dockerfile is located)
+      args:
+        BUILD_TRANSLATIONS: true # Pass the value for MY_BUILD_ARG
     container_name: superset-app
     restart: always
     env_file: .env
     # To upgrade to postgres metadata db.
-    command: >
-      bash -c "
-        superset db upgrade &&
-        superset fab create-admin --username admin --firstname Admin --lastname User --email adminPostgres@admin.com --password admin &&
-        superset init &&
-        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
-      "
+    #command: >
+    #  bash -c "
+    #    superset db upgrade &&
+    #    superset fab create-admin --username admin --firstname Admin --lastname User --email adminPostgres@admin.com --password admin &&
+    #    superset init &&
+    #    superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
+    #  "
     ports:
       - 8088:8088
     depends_on:
@@ -45,21 +48,42 @@ services:
 
   ## Contenedor de inicialización (se ejecuta una sola vez)
   superset-init:
-    image: apache/superset:5.0.0
+    image: apache/superset:${TAG}
     container_name: superset-init
-    command: ["/app/docker/docker-init.sh"]
+    command: ["sh", "-c", "/app/docker/docker-init.sh && python /app/public_init.py"] #["sh", "-c", "/app/docker/docker-init.sh; python /app/public_init.py"]
+      #>
+      # sh -c "
+      #   superset db upgrade &&
+      #   superset fab create-admin \
+      #     --username admin \
+      #     --firstname Admin \
+      #     --lastname User \
+      #     --email admin@admin.com \
+      #     --password admin &&
+      #   superset init &&
+      #   python /app/public_init.py
+      # "
+
+      #  command: >
+      # sh -c "
+      #   superset db upgrade &&
+      #   superset init &&
+      #   python /app/public_init.py &&
+      #   superset run -p 8088 --with-threads --reload --debugger
+      # "
     depends_on:
       - db
       - redis
     env_file: .env
     volumes:
       - superset-home:/app/superset_home
+      - ./custom/public_init.py:/app/public_init.py
     networks:
-        - superset-net
+      - superset-net
 
   ## Worker de Celery: ejecuta tareas pesadas en segundo plano
   superset-worker:
-    image: apache/superset:5.0.0
+    image: apache/superset:${TAG}
     container_name: superset-worker
     command: ["/app/docker/docker-bootstrap.sh", "worker"]
     restart: always
@@ -76,7 +100,7 @@ services:
 
   # Planificador de Celery: programa tareas periódicas
   superset-worker-beat:
-    image: apache/superset:5.0.0
+    image: apache/superset:${TAG}
     container_name: superset-worker-beat
     command: ["/app/docker/docker-bootstrap.sh", "beat"]
     restart: always
