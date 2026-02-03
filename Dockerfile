@@ -139,9 +139,14 @@ RUN pip install --no-cache-dir --upgrade uv && \
 # ----- CAPA 3: Copia de archivos custom -----
 COPY ./custom/ /custom/
 
+# Se deben agregar a una carpeta /custom a la raíz principal del proyecto:
+#   - loading.gif (animación de loading).
+#   - favicon.png (logo para el navegador/marcador).
+#   - logo-horiz.png (Logo para la UI de Superset).
+
 RUN cp /custom/superset_config.py /app/pythonpath/superset_config.py && \
     cp /custom/messages.po /app/superset/translations/es/LC_MESSAGES/messages.po && \
-    cp /custom/public_init.py /app/public_init.py && \
+    # cp /custom/public_init.py /app/public_init.py && \ # Para TABLEROS PÚBLICOS.
     #Borrar loading gif que dan problemas
     cp /custom/loading.gif /app/build/lib/superset/static/assets/loading.cff8a5da.gif && \
     cp /custom/loading.gif /app/superset/static/assets/loading.cff8a5da.gif && \
@@ -152,12 +157,15 @@ RUN cp /custom/superset_config.py /app/pythonpath/superset_config.py && \
     cp /custom/loading.gif /app/superset/static/assets/images/loading.gif && \
     cp /custom/favicon.png /app/superset/static/assets/images/favicon.png && \
     cp /custom/logo-horiz.png /app/superset/static/assets/images/superset-logo-horiz.png && \
-    chmod +x /app/public_init.py
+    # chmod +x /app/public_init.py # Para TABLEROS PÚBLICOS.
 
 # ----- FINAL: Cambio a Superset user para correr entrypoint -----
 USER superset
 
 CMD ["/app/docker/entrypoints/run-server.sh"]
+
+
+# Variaciones a borrar
 
 #RUN pip install \
 # install psycopg2 for using PostgreSQL metadata store - could be a MySQL package if using that backend:

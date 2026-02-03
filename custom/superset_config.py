@@ -1,38 +1,47 @@
 #To get the envs
 import os
 #import time # Para los assets
+# Para formato moneda.
+from typing import Any, Callable, Literal, TYPE_CHECKING, TypedDict
 
+# REVISAR CONFIGURACIÓN / USO REDIS.
 
-PUBLIC_ROLE_LIKE = "Gamma"  # or create a custom role
-AUTH_ROLE_PUBLIC = "Public"
-
+# PARA TABLEROS PÚBLICOS.
+# PUBLIC_ROLE_LIKE = "Gamma"  # or create a custom role
+# AUTH_ROLE_PUBLIC = "Public"
 
 # Allow unauthenticated access
-GUEST_ROLE_NAME = "Gamma"  # or "Public"
-GUEST_TOKEN_JWT_SECRET = "your-secret-key-here"  # Generate a secure key
-GUEST_TOKEN_JWT_ALGO = "HS256"
-GUEST_TOKEN_HEADER_NAME = "X-Guest-Token"
+# GUEST_ROLE_NAME = "Gamma"  # or "Public"
+# GUEST_TOKEN_JWT_SECRET = "your-secret-key-here"  # Generate a secure key
+# GUEST_TOKEN_JWT_ALGO = "HS256"
+# GUEST_TOKEN_HEADER_NAME = "X-Guest-Token"
 
 # CSRF settings for public access (be careful with this in production)
-WTF_CSRF_ENABLED = False  # Or True with proper exemptions
+#WTF_CSRF_ENABLED = False  # Or True with proper exemptions
 
 # Enable dashboard embedding
-ENABLE_EMBEDDED_SUPERSET = True
+#ENABLE_EMBEDDED_SUPERSET = True
 
 # CORS settings for embedded dashboards
-ENABLE_CORS = True
-CORS_OPTIONS = {
-    'supports_credentials': True,
-    'allow_headers': ['*'],
-    'resources': ['*'],
-    'origins': ['*']  # Restrict this in production!
-}
+#ENABLE_CORS = True
 
-# Cache-busting version
+# CORS_OPTIONS = {
+#     'supports_credentials': True,
+#     'allow_headers': ['*'],
+#     'resources': ['*'],
+#     'origins': ['*']  # Restrict this in production!
+# }
+
+################################################################################
+
+# LIMPIAR
+# Cache-busting version NO FUNCIONA.
 #CACHE_BUST_VERSION = int(time.time())
 
+# LIMPIAR
 #FAVICONS = [{"href": f"/static/assets/images/favicon.png?v={CACHE_BUST_VERSION}", "type": "image/png"}]
 
+# LIMPIAR
 # THEME = {
 #     "token": {
 #         "brandLogoUrl": f"/static/assets/images/superset_logo_horiz.png?v={CACHE_BUST_VERSION}",
@@ -44,6 +53,7 @@ CORS_OPTIONS = {
 
 FAVICONS = [{"href": "/static/assets/images/favicon.png", "type": "image/png"}]
 
+# lIMPIAR
 # THEME_DEFAULT = {
 #     # Other theme configurations can go here
 #     "brandSpinnerUrl": "/static/assets/images/loading.gif",
@@ -53,7 +63,7 @@ THEME = {
     "token": {
         "brandLogoUrl": "/static/assets/images/superset_logo_horiz.png", # Path to your logo
         "brandLogoHref": "/", # Optional: URL to redirect to when the logo is clicked (e.g., home page)
-        "brandLogoTooltip": "PBA", # Optional: Tooltip text
+        "brandLogoTooltip": "Tableros PBA", # Optional: Tooltip text
         "brandSpinnerUrl": "/static/assets/images/loading.gif"
     }
 }
@@ -62,11 +72,13 @@ THEME = {
 SEND_FILE_MAX_AGE_DEFAULT = 0
 
 # superset_config.py
+# lIMPIAR
 #SQLALCHEMY_DATABASE_URI = '${DATABASE_DIALECT}://${DATABASE_PASSWORD}:${DATABASE_USER}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_DB}'
 SQLALCHEMY_DATABASE_URI = os.getenv("SUPERSET_DATABASE_URI")
 
-from typing import Any, Callable, Literal, TYPE_CHECKING, TypedDict
 
+
+# REVISAR
 # class D3Format(TypedDict, total=False):
 #     decimal: str
 #     thousands: str
@@ -89,7 +101,7 @@ LANGUAGES = {
     'en': {'flag': 'us', 'name': 'English'},
 }
 
-
+# REVISAR
 # SUPERSET_D3_LOCALE = """
 # {
 #   "decimal": ",",
@@ -106,8 +118,10 @@ LANGUAGES = {
 #   "shortMonths": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "UFA", "Nov", "Dic"]
 # } """
 
+# REVISAR
 #Agrego Variables  a pedido de luna  pantillas sql jinja
 #ENABLE_TEMPLATE_PROCESSING: true
+
 FEATURE_FLAGS = {
     'ENABLE_JAVASCRIPT_CONTROLS': True,
     'ENABLE_TEMPLATE_PROCESSING': True,
